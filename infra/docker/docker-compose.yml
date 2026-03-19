@@ -1,6 +1,9 @@
 version: '3.8'
 
 services:
+  # ============================================================================
+  # PostgreSQL Database
+  # ============================================================================
   postgres:
     image: postgres:15-alpine
     container_name: property-db
@@ -20,7 +23,11 @@ services:
       retries: 5
     networks:
       - property-network
+    restart: unless-stopped
 
+  # ============================================================================
+  # Redis (Caching & Queues)
+  # ============================================================================
   redis:
     image: redis:7-alpine
     container_name: property-redis
@@ -28,8 +35,74 @@ services:
       - "6379:6379"
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - property-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # Express.js API Server
+  # ============================================================================
+  api:
+    build:
+      context: ../../server
+      dockerfile: Dockerfile
+    container_name: property-api
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://property_admin:secure_password_123@postgres:5432/property_platform
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: property_admin
+      DB_PASSWORD: secure_password_123
+      DB_NAME: property_platform
+      JWT_SECRET: your_super_secure_jwt_secret_change_in_production
+      JWT_EXPIRES_IN: 24h
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: http://localhost:5173
+      S3_BUCKET: property-platform-uploads
+      S3_REGION: us-east-1
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../../server:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - property-network
+    restart: unless-stopped
+    command: npm run dev
+
+  # ============================================================================
+  # Frontend (Optional - for full stack local dev)
+  # ============================================================================
+  frontend:
+    build:
+      context: ../../client-web
+      dockerfile: Dockerfile
+    container_name: property-frontend
+    environment:
+      VITE_API_URL: http://localhost:3000/api
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../../client-web:/app
+      - /app/node_modules
+    depends_on:
+      - api
+    networks:
+      - property-network
+    restart: unless-stopped
+    command: npm run dev
 
 volumes:
   property-db-data:
