@@ -1,4 +1,4 @@
-# server/Dockerfile
+# client-web/Dockerfile
 FROM node:18-alpine
 
 WORKDIR /app
@@ -10,11 +10,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build TypeScript
-RUN npm run build
-
 # Expose port
-EXPOSE 3000
+EXPOSE 5173
 
-# Start server
-CMD ["npm", "start"]
+# Start dev server
+CMD ["npm", "run", "dev", "--", "--host"]
