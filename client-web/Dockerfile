@@ -1,17 +1,30 @@
-# client-web/Dockerfile
-FROM node:18-alpine
+# Stage 1: Build the React app
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies
+# Copy package files and install dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
-# Copy source code
+# Copy source code and build
 COPY . .
+RUN npm run build
 
-# Expose port
-EXPOSE 5173
+# Stage 2: Serve with nginx
+FROM nginx:alpine
 
-# Start dev server
-CMD ["npm", "run", "dev", "--", "--host"]
+# Remove default nginx config
+RUN rm -f /etc/nginx/conf.d/default.conf
+
+# Copy built React app to nginx web root
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy custom nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80
+EXPOSE 80
+
+# Start nginx (this is the correct command for nginx:alpine)
+CMD ["nginx", "-g", "daemon off;"]

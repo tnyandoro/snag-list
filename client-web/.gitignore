@@ -10,8 +10,15 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-*.local
+npm-debug.log
+dist
+.git
+.env
+*.md
+.DS_Store
+package-lock.json  # ← Ignore lock file in Docker build
 
+.dockerignore
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
