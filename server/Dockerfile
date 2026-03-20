@@ -1,20 +1,18 @@
-# server/Dockerfile
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Install dependencies
+# Copy package files
 COPY package*.json ./
-RUN npm ci
+
+# Install dependencies
+RUN npm install
 
 # Copy source code
 COPY . .
 
-# Build TypeScript
-RUN npm run build
-
-# Expose port
+# Expose port - IMPORTANT for Docker networking
 EXPOSE 3000
 
-# Start server
-CMD ["npm", "start"]
+# Run with ts-node for development (no build step)
+CMD ["npx", "ts-node", "src/index.ts"]

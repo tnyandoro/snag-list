@@ -1,3 +1,4 @@
+# infra/docker/docker-compose.yml
 version: '3.8'
 
 services:
@@ -15,7 +16,7 @@ services:
       - "5432:5432"
     volumes:
       - property-db-data:/var/lib/postgresql/data
-      - ../../server/src/database/migrations:/docker-entrypoint-initdb.d
+      - ../../server/src/database/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U property_admin -d property_platform"]
       interval: 10s
@@ -64,9 +65,7 @@ services:
       JWT_SECRET: your_super_secure_jwt_secret_change_in_production
       JWT_EXPIRES_IN: 24h
       REDIS_URL: redis://redis:6379
-      CORS_ORIGIN: http://localhost:5173
-      S3_BUCKET: property-platform-uploads
-      S3_REGION: us-east-1
+      CORS_ORIGIN: "*"
     ports:
       - "3000:3000"
     volumes:
@@ -80,29 +79,25 @@ services:
     networks:
       - property-network
     restart: unless-stopped
-    command: npm run dev
+    command: npx ts-node src/index.ts
 
   # ============================================================================
-  # Frontend (Optional - for full stack local dev)
+  # React Frontend (served via nginx)
   # ============================================================================
   frontend:
     build:
       context: ../../client-web
       dockerfile: Dockerfile
     container_name: property-frontend
-    environment:
-      VITE_API_URL: http://localhost:3000/api
     ports:
-      - "5173:5173"
-    volumes:
-      - ../../client-web:/app
-      - /app/node_modules
+      - "5173:80"
     depends_on:
       - api
     networks:
       - property-network
     restart: unless-stopped
-    command: npm run dev
+    # NO command override - uses CMD from Dockerfile (nginx)
+    # NO volumes mount - uses built files from image
 
 volumes:
   property-db-data:
